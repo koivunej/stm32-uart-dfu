@@ -160,9 +160,26 @@ class DfuCommandHandler:
                 raise KeyError('Missing --mcuid for %s' % id)
 
             firmware_path = paths[id]
+            del paths[id]
 
-        with open(firmware_path, 'rb') as firmware_file:
-            firmware = firmware_file.read()
+            for otherid, path in paths.items():
+                try:
+                    with open(path, 'rb') as _tmp:
+                        pass
+                except (OSError, IOError) as err:
+                    # assume all of the given files should be readable but fail
+                    # for only the one needed
+                    print('Warning: Firmware specified for other MCUID %s (%s) '
+                          'could not be opened: %s' % (otherid, path, err))
+
+        try:
+            with open(firmware_path, 'rb') as firmware_file:
+                    firmware = firmware_file.read()
+        except FileNotFoundError as e:
+            if not args.file:
+                raise FileNotFoundError("Firmware file specified for MCUID %s not found: %s" % (id, firmware_path)) from e
+            else:
+                raise e
 
         if args.erase:
             if args.memory_map:
