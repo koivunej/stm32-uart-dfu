@@ -147,8 +147,39 @@ class DfuCommandHandler:
         bar_thread.join()
 
     def load(self, dfu, args):
-        with open(args.file, 'rb') as firmware_file:
-            firmware = firmware_file.read()
+
+        firmware_path = args.file
+
+        if not firmware_path:
+            # select by id
+            id = '0x%s' % (dfu.id.hex())
+
+            paths = dict(args.mcuid)
+
+            if not id in paths:
+                raise KeyError('Missing --mcuid for %s' % id)
+
+            firmware_path = paths[id]
+            del paths[id]
+
+            for otherid, path in paths.items():
+                try:
+                    with open(path, 'rb') as _tmp:
+                        pass
+                except (OSError, IOError) as err:
+                    # assume all of the given files should be readable but fail
+                    # for only the one needed
+                    print('Warning: Firmware specified for other MCUID %s (%s) '
+                          'could not be opened: %s' % (otherid, path, err))
+
+        try:
+            with open(firmware_path, 'rb') as firmware_file:
+                    firmware = firmware_file.read()
+        except FileNotFoundError as e:
+            if not args.file:
+                raise FileNotFoundError("Firmware file specified for MCUID %s not found: %s" % (id, firmware_path)) from e
+            else:
+                raise e
 
         if args.erase:
             if args.memory_map:
@@ -227,6 +258,9 @@ if __name__ == '__main__':
     _ARGS_HELP = {
         'address': 'Memory address for ',
         'size': 'Required size of memory to be ',
+        'mcuid-firmware': 'MCU model specific firmware file (see id '
+                          'command). Can be specified multiple times. '
+                          'Format: <mcuid (hex)> <filename>',
         'memmap': 'Json file, containing memory structure.'
                   'Format: [{"address": "value", "size": "value"}, ...]',
         'run': 'Run program after loading.',
@@ -273,7 +307,12 @@ if __name__ == '__main__':
     load_command.add_argument('-e', '--erase', action='store_true',
                               help=_ARGS_HELP['erase'])
 
-    load_command.add_argument('-f', '--file', help='Binary firmware file.')
+    firmware_group = load_command.add_mutually_exclusive_group(required = True)
+
+    firmware_group.add_argument('--mcuid', action='append', nargs=2,
+                                help=_ARGS_HELP['mcuid-firmware'])
+
+    firmware_group.add_argument('-f', '--file', help='Binary firmware file.')
 
     load_command.add_argument('-m', '--memory-map', default=None,
                               help=_ARGS_HELP['memmap'])
