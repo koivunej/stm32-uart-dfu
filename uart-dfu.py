@@ -213,6 +213,15 @@ class DfuCommandHandler:
                 self._abort()
                 raise
 
+def _reset_strategy(port, reset, boot0, signal):
+    """This allows the user to do at least the strategy2 selection (as specified in AN2606) with an UART adapter cable."""
+    port.ctsrts = False
+    port.dsrdts = False
+    setattr(port, boot0, signal)
+    setattr(port, reset, signal)
+    # with some sleep it reset into bootloader seems to happen more often
+    time.sleep(0.1)
+    setattr(port, reset, not signal)
 
 if __name__ == '__main__':
     _ARGS_HELP = {
@@ -222,7 +231,13 @@ if __name__ == '__main__':
                   'Format: [{"address": "value", "size": "value"}, ...]',
         'run': 'Run program after loading.',
         'erase': 'Erase memory enough to store firmware'
-                 '(whole memory if no memory map).'
+                 '(whole memory if no memory map).',
+        'reset-strategy': 'Select strategy to use to reset the chip into '
+                          'bootloader mode. Requires connecting DTR and '
+                          'RTS signals to BOOT0 and RESET. '
+                          '"rtsdtr" treats RTS as RESET and DTR as BOOT0. '
+                          '"dtrrts" treats DTR as RESET and RTS as BOOT0. '
+                          '"none" does not modify DTR/CTS lines.'
     }
 
     dfu_handler = DfuCommandHandler()
@@ -232,6 +247,20 @@ if __name__ == '__main__':
     arg_parser.add_argument(
         '-p', '--port', default='/dev/ttyUSB0',
         help='Serial port file (for example: /dev/ttyUSB0).')
+
+    reset_strategies = {
+        'rtsdtr': lambda port, signal: _reset_strategy(port, 'rts', 'dtr', signal),
+        'dtrrts': lambda port, signal: _reset_strategy(port, 'dtr', 'rts', signal),
+        'none': lambda port, signal: None,
+    }
+
+    arg_parser.add_argument(
+        '-r', '--reset-strategy', default='none', choices=reset_strategies.keys(),
+        help=_ARGS_HELP['reset-strategy'])
+
+    arg_parser.add_argument(
+        '-n', '--negate-reset',
+        help='Negate RTS/DTR signal used for reset and boot0.')
 
     commands = arg_parser.add_subparsers()
 
@@ -294,5 +323,12 @@ if __name__ == '__main__':
 
     args = arg_parser.parse_args()
 
-    with Stm32UartDfu(args.port) as dfu:
+    reset_signal = False
+
+    if args.negate_reset:
+        reset_signal = not reset_signal
+
+    reset_strategy = lambda port: reset_strategies[args.reset_strategy](port, reset_signal)
+
+    with Stm32UartDfu(args.port, reset_strategy) as dfu:
         args.func(dfu, args)

@@ -48,3 +48,8 @@ Basically this file contains list of dicts like that:
 ]
 ```  
 Without memory map only mass erase is available.
+
+### Entering system bootloader
+See [STM32 AN2606](https://www.st.com/content/ccc/resource/technical/document/application_note/b9/9b/16/3a/12/1e/40/0c/CD00167594.pdf/files/CD00167594.pdf/jcr:content/translations/en.CD00167594.pdf).
+If you are communicating with the MCU using an UART USB adapter, it likely supports flow control signals which can be used reset the MCU and possibly even control BOOT0 pin in order to enter the bootloader.
+Once you have these line(s) connected to respective pins, use `--reset-strategy [rtsdtr|dtrrts]` to reset into bootloader before executing any other command.

@@ -81,7 +81,7 @@ class Stm32UartDfu:
         'readout unprotect': 0x92
     }
 
-    def __init__(self, port: str):
+    def __init__(self, port: str, reset_strategy):
         self._port_handle = serial.Serial(
             port=port, baudrate=self._DEFAULT_PARAMETERS['baudrate'],
             parity=self._DEFAULT_PARAMETERS['parity'],
@@ -89,6 +89,8 @@ class Stm32UartDfu:
 
         if not self._port_handle.isOpen():
             raise serial.SerialException("Can't open serial port.")
+
+        self._reset_strategy = lambda port: reset_strategy(port)
 
         self._uart_dfu_init()
 
@@ -147,7 +149,10 @@ class Stm32UartDfu:
 
     @_retry(_RETRIES, 'DFU init', _serial_flush)
     def _uart_dfu_init(self):
-        """Sends uart dfu init byte and waits for acknowledge answer."""
+        """Resets the device, sends uart dfu init byte and waits for acknowledge answer."""
+
+        strat = self._reset_strategy;
+        strat(self._port_handle); # we cannot really know if this works or not
 
         self._serial_write(0x7f.to_bytes(1, 'big'))
         self._check_acknowledge()
