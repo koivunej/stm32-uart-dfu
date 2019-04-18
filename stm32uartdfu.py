@@ -12,7 +12,7 @@ class DfuAcknowledgeException(DfuException):
     """Dfu exception class for any acknowledgement issues."""
 
     def __init__(self, answer):
-        super().__init__(f'Acknowledge error (dfu answer: {answer}')
+        super().__init__(f'Acknowledge error (dfu answer: {answer})')
 
 
 class DfuSerialIOException(DfuException, serial.SerialException):
