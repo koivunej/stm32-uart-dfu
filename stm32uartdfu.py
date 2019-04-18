@@ -373,7 +373,7 @@ class Stm32UartDfu:
             default: None
         """
 
-        if not size and not address:
+        if not size:
             mass_erase = b'\xff\xff'
             parameters = b''.join([mass_erase, self._checksum(mass_erase)])
         else:
