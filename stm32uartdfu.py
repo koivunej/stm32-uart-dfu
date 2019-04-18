@@ -411,3 +411,23 @@ class Stm32UartDfu:
         self._perform_erase(parameters)
 
         progress_update(100)
+
+    def write_unprotect(self):
+        """Clears any write protection bits. Not sure what are the failure conditions.
+        The device will likely require rebooting or power cycling once this command has been executed
+        successfully."""
+        command = 0x73
+        self._serial_write(
+            b''.join([command.to_bytes(1, 'big'), self._checksum(command)]))
+        self._check_acknowledge()
+        self._check_acknowledge(long_timeout = True)
+
+    def read_unprotect(self):
+        """Clears the read protect if there is any. Likely throws as the command returns NACK for
+        if there was no read protection enabled. The device will likely require rebooting or power cycling
+        once this command has been executed successfully."""
+        command = 0x92
+        self._serial_write(
+            b''.join([command.to_bytes(1, 'big'), self._checksum(command)]))
+        self._check_acknowledge()
+        self._check_acknowledge(long_timeout = True)
