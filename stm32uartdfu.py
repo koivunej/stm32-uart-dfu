@@ -117,16 +117,27 @@ class Stm32UartDfu:
 
         return (0xff & val).to_bytes(1, 'big')
 
-    def _check_acknowledge(self):
+    def _check_acknowledge(self, long_timeout = False):
         """
         Reads dfu answer and checks is it acknowledge byte or not.
         :return:
             bool - True if acknowledge byte was received, otherwise False.
         """
 
-        response = self._port_handle.read()
-        if not response or response != self._RESPONSE['ack']:
-            raise DfuAcknowledgeException(response)
+        if long_timeout:
+            port_settings = self._port_handle.getSettingsDict()
+            port_settings['timeout'] = 5 * 60
+            self._port_handle.applySettingsDict(port_settings)
+
+        try:
+            response = self._port_handle.read()
+            if not response or response != self._RESPONSE['ack']:
+                raise DfuAcknowledgeException(response)
+        finally:
+            if long_timeout:
+                port_settings['timeout'] = self._DEFAULT_PARAMETERS['timeout']
+                self._port_handle.applySettingsDict(port_settings)
+
 
     def _serial_write(self, data):
         done = self._port_handle.write(data)
@@ -197,15 +208,8 @@ class Stm32UartDfu:
     def _perform_erase(self, parameters):
         self._serial_write(parameters)
 
-        port_settings = self._port_handle.getSettingsDict()
-        port_settings['timeout'] = 5 * 60
-        self._port_handle.applySettingsDict(port_settings)
+        self._check_acknowledge(long_timeout = True)
 
-        try:
-            self._check_acknowledge()
-        finally:
-            port_settings['timeout'] = self._DEFAULT_PARAMETERS['timeout']
-            self._port_handle.applySettingsDict(port_settings)
 
     # dfu properties
 
