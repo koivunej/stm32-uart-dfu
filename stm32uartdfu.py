@@ -81,11 +81,14 @@ class Stm32UartDfu:
         'readout unprotect': 0x92
     }
 
-    def __init__(self, port: str, reset_strategy):
-        self._port_handle = serial.Serial(
-            port=port, baudrate=self._DEFAULT_PARAMETERS['baudrate'],
-            parity=self._DEFAULT_PARAMETERS['parity'],
-            timeout=self._DEFAULT_PARAMETERS['timeout'])
+    def __init__(self, port, reset_strategy):
+        if not hasattr(port, 'isOpen'):
+            self._port_handle = serial.Serial(
+                port=port, baudrate=self._DEFAULT_PARAMETERS['baudrate'],
+                parity=self._DEFAULT_PARAMETERS['parity'],
+                timeout=self._DEFAULT_PARAMETERS['timeout'])
+        else:
+            self._port_handle = port
 
         if not self._port_handle.isOpen():
             raise serial.SerialException("Can't open serial port.")
