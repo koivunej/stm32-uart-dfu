@@ -87,8 +87,10 @@ class Stm32UartDfu:
                 port=port, baudrate=self._DEFAULT_PARAMETERS['baudrate'],
                 parity=self._DEFAULT_PARAMETERS['parity'],
                 timeout=self._DEFAULT_PARAMETERS['timeout'])
+            self._close_port = False
         else:
             self._port_handle = port
+            self._close_port = True
 
         if not self._port_handle.isOpen():
             raise serial.SerialException("Can't open serial port.")
@@ -103,14 +105,14 @@ class Stm32UartDfu:
         self._read_protection_status = None
 
     def __delete__(self):
-        if self._port_handle.isOpen():
+        if self._port_handle.isOpen() and self._close_port:
             self.close()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._port_handle.isOpen():
+        if self._port_handle.isOpen() and self._close_port:
             self.close()
 
     @staticmethod
@@ -304,6 +306,7 @@ class Stm32UartDfu:
     # public methods
 
     def close(self):
+        assert self._close_port
         self._port_handle.close()
 
     @_retry(_RETRIES, 'go', _serial_flush)
