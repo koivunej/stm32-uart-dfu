@@ -87,10 +87,10 @@ class Stm32UartDfu:
                 port=port, baudrate=self._DEFAULT_PARAMETERS['baudrate'],
                 parity=self._DEFAULT_PARAMETERS['parity'],
                 timeout=self._DEFAULT_PARAMETERS['timeout'])
-            self._close_port = False
+            self._close_port = True
         else:
             self._port_handle = port
-            self._close_port = True
+            self._close_port = False
 
         if not self._port_handle.isOpen():
             raise serial.SerialException("Can't open serial port.")
